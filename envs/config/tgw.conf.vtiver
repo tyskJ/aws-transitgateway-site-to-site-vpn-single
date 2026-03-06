@@ -1,0 +1,108 @@
+connections {
+
+  ########################################
+  # Tunnel 1
+  ########################################
+  tgw-tunnel1 {
+    version = 2
+    send_cert = never
+    proposals = aes256-sha256-modp2048
+
+    local_addrs  = 192.168.254.244
+    remote_addrs = 35.73.210.15
+
+    local {
+      auth = psk
+      id = 54.150.56.236
+    }
+
+    remote {
+      auth = psk
+      id = 35.73.210.15
+    }
+
+    children {
+      tgw-child1 {
+        mode = tunnel
+        local_ts  = 0.0.0.0/0
+        remote_ts = 0.0.0.0/0
+
+        esp_proposals = aes256-sha256-modp2048
+
+        mark_in  = 100
+        mark_out = 100
+
+        dpd_action   = restart
+        start_action = start
+        close_action = restart
+
+        rekey_time = 3600
+        life_time  = 28800
+
+        updown = /etc/swanctl/scripts/vti-updown.sh
+      }
+    }
+  }
+
+  ########################################
+  # Tunnel 2
+  ########################################
+  tgw-tunnel2 {
+    version = 2
+    send_cert = never
+    proposals = aes256-sha256-modp2048
+
+    local_addrs  = 192.168.254.244
+    remote_addrs = 52.192.199.148
+
+    local {
+      auth = psk
+      id = 54.150.56.236
+    }
+
+    remote {
+      auth = psk
+      id = 52.192.199.148
+    }
+
+    children {
+      tgw-child2 {
+        mode = tunnel
+        local_ts  = 0.0.0.0/0
+        remote_ts = 0.0.0.0/0
+
+        esp_proposals = aes256-sha256-modp2048
+
+        mark_in  = 200
+        mark_out = 200
+
+        dpd_action   = restart
+        start_action = start
+        close_action = restart
+
+        rekey_time = 3600
+        life_time  = 28800
+
+        updown = /etc/swanctl/scripts/vti-updown.sh
+      }
+    }
+  }
+}
+
+########################################################
+# Secrets（PSK）
+########################################################
+secrets {
+
+  ike-tunnel1 {
+    id-1 = 54.150.56.236
+    id-2 = 35.73.210.15
+    secret = ""
+  }
+
+  ike-tunnel2 {
+    id-1 = 54.150.56.236
+    id-2 = 52.192.199.148
+    secret = ""
+  }
+}
