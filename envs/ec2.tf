@@ -50,7 +50,7 @@ resource "aws_network_interface" "this" {
 /************************************************************
 EC2 - Gateway
 ************************************************************/
-resource "aws_instance" "this" {
+resource "aws_instance" "gateway" {
   for_each = local.instances
 
   ami           = data.aws_ami_ids.ubuntu.ids[0]
@@ -96,7 +96,7 @@ resource "aws_eip" "this" {
   depends_on = [aws_internet_gateway.this]
 
   domain   = each.value.domain
-  instance = aws_instance.this[each.value.instance_key].id
+  instance = aws_instance.gateway[each.value.instance_key].id
   tags = {
     Name = each.value.name
   }
@@ -109,7 +109,7 @@ resource "aws_network_interface_attachment" "this" {
   for_each   = local.instances
   depends_on = [aws_eip.this]
 
-  instance_id          = aws_instance.this[each.key].id
+  instance_id          = aws_instance.gateway[each.key].id
   network_interface_id = aws_network_interface.this[each.value.secondary_eni_key].id
   device_index         = 1
 }
