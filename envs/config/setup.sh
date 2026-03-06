@@ -42,16 +42,7 @@ ufw disable
 ### send_redirects = 0 [セキュリティ上の理由よりICMPリダイレクトパケットの送出無効化]
 ########################################
 cat <<EOF > /etc/sysctl.d/99-vpn.conf
-net.ipv4.ip_forward = 1
-net.ipv4.conf.all.rp_filter = 0
-net.ipv4.conf.default.rp_filter = 0
-net.ipv4.conf.all.accept_source_route = 0
-net.ipv4.conf.default.accept_source_route = 0
-net.ipv4.ip_no_pmtu_disc=0
-net.ipv4.conf.all.accept_redirects = 0
-net.ipv4.conf.default.accept_redirects = 0
-net.ipv4.conf.all.send_redirects = 0
-net.ipv4.conf.default.send_redirects = 0
+${nw_conf}
 EOF
 ### /etc/sysctl.d/* を適用する
 ### sysctl -p は /etc/sysctl.conf のみ反映される
@@ -70,35 +61,7 @@ apt autoremove -y
 ########################################
 # AddressにはEC2のInsideIPを入れる
 cat <<EOF > /etc/systemd/system/xfrm-ifaces.service
-[Unit]
-Description=Create XFRM interfaces for IPsec (idempotent)
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-
-# ---- 既存があれば消す（無ければ何もしない）----
-ExecStartPre=/bin/sh -c 'ip link show xfrm101 >/dev/null 2>&1 && ip link del xfrm101 || true'
-ExecStartPre=/bin/sh -c 'ip link show xfrm102 >/dev/null 2>&1 && ip link del xfrm102 || true'
-
-# ---- xfrm101（if_id=101）----
-ExecStart=/usr/sbin/ip link add xfrm101 type xfrm if_id 101
-ExecStart=/usr/sbin/ip addr add 169.254.208.49/30 dev xfrm101
-ExecStart=/usr/sbin/ip link set xfrm101 up
-
-# ---- xfrm102（if_id=102） ----
-ExecStart=/usr/sbin/ip link add xfrm102 type xfrm if_id 102
-ExecStart=/usr/sbin/ip addr add 169.254.125.245/30 dev xfrm102
-ExecStart=/usr/sbin/ip link set xfrm102 up
-
-# ---- 停止時に削除（無くてもOK）----
-ExecStop=/bin/sh -c 'ip link show xfrm101 >/dev/null 2>&1 && ip link del xfrm101 || true'
-ExecStop=/bin/sh -c 'ip link show xfrm102 >/dev/null 2>&1 && ip link del xfrm102 || true'
-
-[Install]
-WantedBy=multi-user.target
+${xfrm_conf}
 EOF
 systemctl enable --now xfrm-ifaces.service
 
@@ -111,6 +74,7 @@ echo 'watchfrr_enable=yes' >> /etc/frr/daemons
 systemctl enable --now frr
 
 cat <<EOF > /etc/frr/frr.conf
+${frr_conf}
 EOF
 chown frr:frr /etc/frr/frr.conf
 chmod 640 /etc/frr/frr.conf
@@ -119,19 +83,11 @@ chmod 640 /etc/frr/frr.conf
 # Strongswan settings
 ########################################
 cat <<EOF > /etc/swanctl/conf.d/tgw.tf
+${strongswan_conf}
 EOF
 
 cat <<EOF > /etc/strongswan.d/add-charon.conf
-charon {
-
-    # Install routes into a separate routing table for established IPsec
-    # tunnels.
-    install_routes = no
-
-    # Install virtual IP addresses.
-    install_virtual_ip = no
-
-}
+${charon_conf}
 EOF
 
 ########################################
@@ -141,55 +97,12 @@ EOF
 echo "100 tgw" >> /etc/iproute2/rt_tables
 ### ens6 network
 cat <<EOF > /etc/systemd/network/20-ens6.network
-[Match]
-Name=ens6
-
-[Network]
-DHCP=yes
-IPForward=yes
-
-# DHCP で ens6 への default route を入れさせない（Internetはens5）
-[DHCP]
-UseRoutes=false
-
-# ----------------------------
-# 背後ネットワーク（複数OK）
-# ----------------------------
-[Route]
-Destination=192.168.1.0/24
-
-# 例：将来増えてもここに足すだけ
-# [Route]
-# Destination=192.168.2.0/24
-# [Route]
-# Destination=192.168.3.0/24
-
-# ----------------------------
-# src-based PBR（Routing Policy）
-# ----------------------------
-[RoutingPolicyRule]
-From=192.168.1.0/24
-To=172.16.0.0/16
-Table=100
-Priority=100
+${ens6_conf}
 EOF
 ### 反映
 networkctl reload
 ### tgwテーブルルートルールサービス化
 cat <<EOF > /etc/systemd/system/tgw-ecmp.service
-[Unit]
-Description=TGW ECMP Routing
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=oneshot
-ExecStart=/sbin/ip route replace table 100 172.16.0.0/16 \
-    nexthop dev xfrm101 weight 1 \
-    nexthop dev xfrm102 weight 1
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
+${rtbrule_conf}
 EOF
 systemctl enable --now tgw-ecmp.service
