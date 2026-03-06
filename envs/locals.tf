@@ -142,7 +142,7 @@ locals {
     }
   }
   eips = {
-    onpremises_gateway_ec2_a_primary = {
+    onpremises_gateway_ec2_a = {
       name         = "onpremises-gateway-ec2-a-primary-eni-eip"
       domain       = "vpc"
       instance_key = "onpremises_gateway_ec2_a"
@@ -191,7 +191,7 @@ locals {
     onpremises_gateway_ec2_a = {
       name    = "cgw-onpremises-gateway-ec2-a"
       asn     = 65000
-      eip_key = "onpremises_gateway_ec2_a_primary"
+      eip_key = "onpremises_gateway_ec2_a"
     }
   }
   vpncons = {
