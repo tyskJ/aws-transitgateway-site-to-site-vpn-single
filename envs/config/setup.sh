@@ -66,25 +66,11 @@ EOF
 systemctl enable --now xfrm-ifaces.service
 
 ########################################
-# BGP
-########################################
-apt install frr -y
-sed -i 's/^bgpd=no/bgpd=yes/' /etc/frr/daemons
-echo 'watchfrr_enable=yes' >> /etc/frr/daemons
-systemctl enable --now frr
-
-cat <<EOF > /etc/frr/frr.conf
-${frr_conf}
-EOF
-chown frr:frr /etc/frr/frr.conf
-chmod 640 /etc/frr/frr.conf
-
-########################################
 # Strongswan settings
 ########################################
 TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
 CGWPIP=`curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4`
-cat <<EOF > /etc/swanctl/conf.d/tgw.tf
+cat <<EOF > /etc/swanctl/conf.d/tgw.conf
 connections {
 
   #####################################################################
@@ -295,3 +281,18 @@ cat <<EOF > /etc/systemd/system/tgw-ecmp.service
 ${rtbrule_conf}
 EOF
 systemctl enable --now tgw-ecmp.service
+
+########################################
+# BGP
+########################################
+apt install frr -y
+sed -i 's/^bgpd=no/bgpd=yes/' /etc/frr/daemons
+echo 'watchfrr_enable=yes' >> /etc/frr/daemons
+systemctl enable --now frr
+
+cat <<EOF > /etc/frr/frr.conf
+${frr_conf}
+EOF
+chown frr:frr /etc/frr/frr.conf
+chmod 640 /etc/frr/frr.conf
+systemctl restart frr
