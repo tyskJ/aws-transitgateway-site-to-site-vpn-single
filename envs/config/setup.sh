@@ -265,6 +265,8 @@ cat <<EOF > /etc/strongswan.d/add-charon.conf
 ${charon_conf}
 EOF
 
+systemctl restart strongswan
+
 ########################################
 # Router Routing
 ########################################
