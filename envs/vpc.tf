@@ -80,6 +80,11 @@ resource "aws_route" "onpremises_gateway_public_to_igw" {
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.this.id
 }
+resource "aws_route" "onpremises_client_private_to_gateway" {
+  route_table_id         = aws_route_table.this["onpremises_client_private"].id
+  destination_cidr_block = "0.0.0.0/0"
+  network_interface_id   = aws_network_interface.this["onpremises_gateway_ec2_a_secondary"].id
+}
 resource "aws_route" "aws_client_private_to_tgw" {
   depends_on = [aws_ec2_transit_gateway_vpc_attachment.this]
 
