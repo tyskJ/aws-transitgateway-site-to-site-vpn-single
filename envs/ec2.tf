@@ -96,36 +96,38 @@ resource "aws_instance" "gateway" {
   force_destroy           = true
   iam_instance_profile    = aws_iam_instance_profile.this[each.value.instanceprofile_key].name
   source_dest_check       = false
-  user_data = templatefile("${path.module}/config/setup.sh", {
-    nw_conf = file("${path.module}/config/99-vpn.conf")
-    xfrm_conf = templatefile("${path.module}/config/xfrm-ifaces.service", {
-      cgwside_tunnel1_insideip = aws_vpn_connection.this[each.key].tunnel1_cgw_inside_address
-      cgwside_tunnel2_insideip = aws_vpn_connection.this[each.key].tunnel2_cgw_inside_address
+  user_data_base64 = base64gzip(
+    templatefile("${path.module}/config/setup.sh", {
+      nw_conf = file("${path.module}/config/99-vpn.conf")
+      xfrm_conf = templatefile("${path.module}/config/xfrm-ifaces.service", {
+        cgwside_tunnel1_insideip = aws_vpn_connection.this[each.key].tunnel1_cgw_inside_address
+        cgwside_tunnel2_insideip = aws_vpn_connection.this[each.key].tunnel2_cgw_inside_address
+      })
+      frr_conf = templatefile("${path.module}/config/frr_${each.key}.conf", {
+        cgw_asn                  = 65000
+        cgw_gip                  = aws_eip.this[each.key].public_ip
+        cgwside_tunnel1_insideip = aws_vpn_connection.this[each.key].tunnel1_cgw_inside_address
+        cgwside_tunnel2_insideip = aws_vpn_connection.this[each.key].tunnel2_cgw_inside_address
+        aws_tgw_asn              = 64512
+        awsside_tunnel1_insideip = aws_vpn_connection.this[each.key].tunnel1_vgw_inside_address
+        awsside_tunnel2_insideip = aws_vpn_connection.this[each.key].tunnel2_vgw_inside_address
+        onpremises_nw_cidr       = local.vpcs.onpremises.cidr
+      })
+      cgw_gip             = aws_eip.this[each.key].public_ip
+      awsside_tunnel1_gip = aws_vpn_connection.this[each.key].tunnel1_address
+      awsside_tunnel2_gip = aws_vpn_connection.this[each.key].tunnel2_address
+      tunnel1_psk         = aws_vpn_connection.this[each.key].tunnel1_preshared_key
+      tunnel2_psk         = aws_vpn_connection.this[each.key].tunnel2_preshared_key
+      charon_conf         = file("${path.module}/config/add-charon.conf")
+      ens6_conf = templatefile("${path.module}/config/20-ens6.network", {
+        onpremises_client_private_a_subnet_cidr = local.subnets.onpremises_client_private_a.cidr
+        aws_vpc_cidr                            = local.vpcs.aws.cidr
+      })
+      rtbrule_conf = templatefile("${path.module}/config/tgw-ecmp.service", {
+        aws_vpc_cidr = local.vpcs.aws.cidr
+      })
     })
-    frr_conf = templatefile("${path.module}/config/frr_${each.key}.conf", {
-      cgw_asn                  = 65000
-      cgw_gip                  = aws_eip.this[each.key].public_ip
-      cgwside_tunnel1_insideip = aws_vpn_connection.this[each.key].tunnel1_cgw_inside_address
-      cgwside_tunnel2_insideip = aws_vpn_connection.this[each.key].tunnel2_cgw_inside_address
-      aws_tgw_asn              = 64512
-      awsside_tunnel1_insideip = aws_vpn_connection.this[each.key].tunnel1_vgw_inside_address
-      awsside_tunnel2_insideip = aws_vpn_connection.this[each.key].tunnel2_vgw_inside_address
-      onpremises_nw_cidr       = local.vpcs.onpremises.cidr
-    })
-    cgw_gip             = aws_eip.this[each.key].public_ip
-    awsside_tunnel1_gip = aws_vpn_connection.this[each.key].tunnel1_address
-    awsside_tunnel2_gip = aws_vpn_connection.this[each.key].tunnel2_address
-    tunnel1_psk         = aws_vpn_connection.this[each.key].tunnel1_preshared_key
-    tunnel2_psk         = aws_vpn_connection.this[each.key].tunnel2_preshared_key
-    charon_conf         = file("${path.module}/config/add-charon.conf")
-    ens6_conf = templatefile("${path.module}/config/20-ens6.network", {
-      onpremises_client_private_a_subnet_cidr = local.subnets.onpremises_client_private_a.cidr
-      aws_vpc_cidr                            = local.vpcs.aws.cidr
-    })
-    rtbrule_conf = templatefile("${path.module}/config/tgw-ecmp.service", {
-      aws_vpc_cidr = local.vpcs.aws.cidr
-    })
-  })
+  )
   tags = {
     Name = each.value.name
   }
