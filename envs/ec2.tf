@@ -131,6 +131,13 @@ resource "aws_instance" "gateway" {
   tags = {
     Name = each.value.name
   }
+  # userdataを変更すると再起動が走るため抑止
+  # 代わりに、user_data_replace_on_change は効かなくなる
+  lifecycle {
+    ignore_changes = [
+      user_data_base64
+    ]
+  }
 }
 
 /************************************************************
