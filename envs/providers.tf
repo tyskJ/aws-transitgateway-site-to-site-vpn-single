@@ -13,7 +13,7 @@ provider "aws" {
   default_tags {
     tags = {
       Env                = "prd"
-      System             = "aws-transitgateway-site-to-site-vpn"
+      System             = "aws-transitgateway-site-to-site-vpn-single"
       ManagedByTerraform = "true"
     }
   }
