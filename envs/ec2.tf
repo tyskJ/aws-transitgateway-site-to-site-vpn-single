@@ -103,16 +103,6 @@ resource "aws_instance" "gateway" {
         cgwside_tunnel1_insideip = aws_vpn_connection.this[each.key].tunnel1_cgw_inside_address
         cgwside_tunnel2_insideip = aws_vpn_connection.this[each.key].tunnel2_cgw_inside_address
       })
-      frr_conf = templatefile("${path.module}/config/frr_${each.key}.conf", {
-        cgw_asn                  = 65000
-        cgw_gip                  = aws_eip.this[each.key].public_ip
-        cgwside_tunnel1_insideip = aws_vpn_connection.this[each.key].tunnel1_cgw_inside_address
-        cgwside_tunnel2_insideip = aws_vpn_connection.this[each.key].tunnel2_cgw_inside_address
-        aws_tgw_asn              = 64512
-        awsside_tunnel1_insideip = aws_vpn_connection.this[each.key].tunnel1_vgw_inside_address
-        awsside_tunnel2_insideip = aws_vpn_connection.this[each.key].tunnel2_vgw_inside_address
-        onpremises_nw_cidr       = local.vpcs.onpremises.cidr
-      })
       cgw_gip             = aws_eip.this[each.key].public_ip
       awsside_tunnel1_gip = aws_vpn_connection.this[each.key].tunnel1_address
       awsside_tunnel2_gip = aws_vpn_connection.this[each.key].tunnel2_address
@@ -127,6 +117,21 @@ resource "aws_instance" "gateway" {
       rtbrule_conf = templatefile("${path.module}/config/tgw-ecmp.service", {
         aws_vpc_cidr = local.vpcs.aws.cidr
       })
+      frr_conf = templatefile("${path.module}/config/frr_${each.key}.conf", {
+        cgw_asn                  = 65000
+        cgw_gip                  = aws_eip.this[each.key].public_ip
+        cgwside_tunnel1_insideip = aws_vpn_connection.this[each.key].tunnel1_cgw_inside_address
+        cgwside_tunnel2_insideip = aws_vpn_connection.this[each.key].tunnel2_cgw_inside_address
+        aws_tgw_asn              = 64512
+        awsside_tunnel1_insideip = aws_vpn_connection.this[each.key].tunnel1_vgw_inside_address
+        awsside_tunnel2_insideip = aws_vpn_connection.this[each.key].tunnel2_vgw_inside_address
+        onpremises_nw_cidr       = local.vpcs.onpremises.cidr
+      })
+      snat_conf = templatefile("${path.module}/config/snat_sources.conf", {
+        aws_client_private_a_subnet_cidr        = local.subnets.aws_client_private_a.cidr
+        onpremises_client_private_a_subnet_cidr = local.subnets.onpremises_client_private_a.cidr
+      })
+      ipset_conf = file("${path.module}/config/nat-ens5-ipset.service")
     })
   )
   tags = {

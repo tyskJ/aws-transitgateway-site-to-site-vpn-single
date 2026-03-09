@@ -298,3 +298,16 @@ EOF
 chown frr:frr /etc/frr/frr.conf
 chmod 640 /etc/frr/frr.conf
 systemctl restart frr
+
+########################################
+# NAT
+########################################
+apt install ipset -y
+mkdir -p /etc/ipset
+cat <<EOF > /etc/ipset/snat_sources.conf
+${snat_conf}
+EOF
+cat <<EOF > /etc/systemd/system/nat-ens5-ipset.service
+${ipset_conf}
+EOF
+systemctl enable --now nat-ens5-ipset.service
