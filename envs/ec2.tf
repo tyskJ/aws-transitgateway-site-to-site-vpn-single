@@ -120,8 +120,9 @@ resource "aws_instance" "gateway" {
       tunnel2_psk         = aws_vpn_connection.this[each.key].tunnel2_preshared_key
       charon_conf         = file("${path.module}/config/add-charon.conf")
       ens6_conf = templatefile("${path.module}/config/20-ens6.network", {
-        onpremises_client_private_a_subnet_cidr = local.subnets.onpremises_client_private_a.cidr
-        aws_vpc_cidr                            = local.vpcs.aws.cidr
+        onpremises_client_private_a_subnet_cidr           = local.subnets.onpremises_client_private_a.cidr
+        onpremises_gateway_private_a_subnet_vpc_router_ip = cidrhost(local.subnets.onpremises_gateway_public_a.cidr, 1)
+        aws_vpc_cidr                                      = local.vpcs.aws.cidr
       })
       rtbrule_conf = templatefile("${path.module}/config/tgw-ecmp.service", {
         aws_vpc_cidr = local.vpcs.aws.cidr
